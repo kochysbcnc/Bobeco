@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOBECO — Échanges entre collègues</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --cream: #FAF6F0;
+    --warm: #F5EDE0;
+    --bark: #8B6A4A;
+    --bark-light: #C4A882;
+    --bark-dark: #5C3F24;
+    --green: #4A7C59;
+    --green-light: #E8F2EB;
+    --blue: #3D6B8C;
+    --blue-light: #E5EEF5;
+    --amber: #C97D2E;
+    --amber-light: #FDF0E0;
+    --red: #C0392B;
+    --text: #2C1F0E;
+    --text-soft: #7A6650;
+    --border: #E2D5C3;
+    --shadow: 0 4px 24px rgba(44,31,14,0.08);
+    --shadow-hover: 0 8px 36px rgba(44,31,14,0.14);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bark-dark);
+    color: #fff;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.2);
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.5rem;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-icon { font-size: 1.6rem; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-badge {
+    background: var(--amber);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .btn-header {
+    background: rgba(255,255,255,0.15);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-header:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── TABS ── */
+  .tabs-bar {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 16px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .tabs-bar::-webkit-scrollbar { display: none; }
+  .tab {
+    padding: 13px 14px;
+    font-size: 0.83rem;
+    font-weight: 500;
+    color: var(--text-soft);
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tab:hover { color: var(--bark); }
+  .tab.active { color: var(--bark-dark); border-bottom-color: var(--bark); font-weight: 600; }
+  .tab-count {
+    background: var(--warm);
+    color: var(--bark);
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+
+  /* ── MAIN LAYOUT ── */
+  .main-wrap { display: flex; min-height: calc(100vh - 113px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    padding: 24px 16px;
+    border-right: 1px solid var(--border);
+    background: #fff;
+  }
+  .sidebar-section { margin-bottom: 28px; }
+  .sidebar-title {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-soft);
+    margin-bottom: 10px;
+    padding: 0 8px;
+  }
+  .filter-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--text);
+    transition: background 0.15s;
+  }
+  .filter-chip:hover { background: var(--warm); }
+  .filter-chip.active { background: var(--warm); font-weight: 600; color: var(--bark-dark); }
+  .filter-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dot-don { background: var(--green); }
+  .dot-pret { background: var(--blue); }
+  .dot-location { background: var(--amber); }
+  .dot-all { background: var(--bark-light); }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .stat-card {
+    background: var(--warm);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-num { font-size: 1.4rem; font-weight: 700; color: var(--bark-dark); font-family: 'Playfair Display', serif; }
+  .stat-label { font-size: 0.72rem; color: var(--text-soft); margin-top: 2px; }
+
+  .btn-post {
+    width: 100%;
+    background: var(--bark-dark);
+    color: #fff;
+    border: none;
+    padding: 13px;
+    border-radius: var(--radius-sm);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .btn-post:hover { background: var(--bark); transform: translateY(-1px); }
+
+  /* ── CONTENT ── */
+  .content { flex: 1; padding: 24px; max-width: 900px; }
+
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .search-input {
+    flex: 1;
+    padding: 11px 18px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-family: 'DM Sans', sans-serif;
+    background: #fff;
+    color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .search-input:focus { outline: none; border-color: var(--bark-light); }
+  .btn-sort {
+    padding: 11px 18px;
+    background: #fff;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.88rem;
+    color: var(--text-soft);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    white-space: nowrap;
+  }
+
+  /* ── CARDS GRID ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 18px;
+  }
+
+  .card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .card-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background: var(--warm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--bark-light);
+    position: relative;
+  }
+  .card-img img { width: 100%; height: 100%; object-fit: cover; }
+  .card-badge {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .badge-don { background: var(--green); color: #fff; }
+  .badge-pret { background: var(--blue); color: #fff; }
+  .badge-location { background: var(--amber); color: #fff; }
+
+  .card-body { padding: 14px 16px 16px; }
+  .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+  .card-desc { font-size: 0.83rem; color: var(--text-soft); line-height: 1.5; margin-bottom: 10px;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .card-author { display: flex; align-items: center; gap: 7px; font-size: 0.8rem; color: var(--text-soft); }
+  .avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.72rem; font-weight: 700; color: #fff; flex-shrink: 0;
+  }
+  .card-price { font-size: 0.88rem; font-weight: 700; color: var(--amber); }
+  .card-free { font-size: 0.83rem; font-weight: 600; color: var(--green); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s;
+  }
+  .modal-overlay.open { display: flex; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .modal {
+    background: #fff;
+    border-radius: var(--radius);
+    max-width: 600px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(30px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .modal-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-family: 'Playfair Display', serif; font-size: 1.3rem; }
+  .modal-close {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--warm); border: none; cursor: pointer;
+    font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-body { padding: 24px; }
+  .modal-img {
+    width: 100%; height: 220px; background: var(--warm);
+    border-radius: var(--radius-sm); margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 4rem; color: var(--bark-light);
+    overflow: hidden;
+  }
+  .modal-img img { width: 100%; height: 100%; object-fit: cover; }
+
+  .modal-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+  .meta-tag {
+    padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600;
+  }
+  .modal-desc { font-size: 0.93rem; line-height: 1.7; color: var(--text); margin-bottom: 20px; }
+  .modal-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .info-item { background: var(--warm); border-radius: var(--radius-sm); padding: 12px; }
+  .info-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-soft); margin-bottom: 4px; }
+  .info-value { font-size: 0.93rem; font-weight: 600; }
+
+  .btn-contact {
+    width: 100%;
+    background: var(--bark-dark);
+    color: #fff;
+    border: none;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-contact:hover { background: var(--bark); }
+
+  /* ── POST MODAL ── */
+  .form-group { margin-bottom: 18px; }
+  .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+  .form-label span { color: var(--red); }
+  .form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-family: 'DM Sans', sans-serif;
+    color: var(--text);
+    background: #fff;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--bark-light); }
+  .form-textarea { resize: vertical; min-height: 90px; }
+  .type-select { display: flex; gap: 10px; margin-bottom: 18px; }
+  .type-btn {
+    flex: 1; padding: 10px 8px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: #fff;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: all 0.15s;
+  }
+  .type-btn.active-don { border-color: var(--green); background: var(--green-light); color: var(--green); }
+  .type-btn.active-pret { border-color: var(--blue); background: var(--blue-light); color: var(--blue); }
+  .type-btn.active-location { border-color: var(--amber); background: var(--amber-light); color: var(--amber); }
+  .type-btn span:first-child { font-size: 1.4rem; }
+
+  .photo-upload {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .photo-upload:hover { border-color: var(--bark-light); background: var(--warm); }
+  .photo-upload input { display: none; }
+  .photo-icon { font-size: 2rem; margin-bottom: 8px; }
+  .photo-text { font-size: 0.85rem; color: var(--text-soft); }
+
+  /* ── RECHERCHE TAB ── */
+  .recherche-hero {
+    background: linear-gradient(135deg, #3D6B8C, #2a4a61);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .recherche-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 6px; }
+  .recherche-hero p { opacity: 0.85; font-size: 0.88rem; max-width: 420px; line-height: 1.6; }
+  .btn-recherche {
+    background: #fff;
+    color: var(--blue);
+    border: none;
+    padding: 12px 22px;
+    border-radius: var(--radius-sm);
+    font-size: 0.92rem;
+    font-weight: 700;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-recherche:hover { opacity: 0.88; }
+
+  .demande-card {
+    background: #fff;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    border-left: 4px solid var(--blue);
+    transition: box-shadow 0.2s;
+    animation: fadeUp 0.3s ease both;
+  }
+  .demande-card:hover { box-shadow: var(--shadow-hover); }
+  .demande-emoji { font-size: 2rem; flex-shrink: 0; margin-top: 2px; }
+  .demande-body { flex: 1; }
+  .demande-title { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+  .demande-desc { font-size: 0.85rem; color: var(--text-soft); line-height: 1.5; margin-bottom: 10px; }
+  .demande-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .demande-meta { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-soft); }
+  .demande-cat { background: var(--blue-light); color: var(--blue); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .btn-repondre {
+    background: var(--blue);
+    color: #fff;
+    border: none;
+    padding: 7px 16px;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-repondre:hover { background: var(--bark-dark); }
+
+  /* ── RÈGLEMENT TAB ── */
+  .reglement-wrap { max-width: 720px; }
+  .reglement-hero {
+    background: var(--bark-dark);
+    color: #fff;
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .reglement-hero::before {
+    content: '📋';
+    position: absolute; right: 24px; top: 50%; transform: translateY(-50%);
+    font-size: 5rem; opacity: 0.15;
+  }
+  .reglement-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.7rem; margin-bottom: 8px; }
+  .reglement-hero p { opacity: 0.85; font-size: 0.93rem; line-height: 1.6; }
+
+  .rule-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow);
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+  .rule-icon { font-size: 1.6rem; flex-shrink: 0; margin-top: 2px; }
+  .rule-title { font-weight: 700; font-size: 0.95rem; margin-bottom: 6px; }
+  .rule-text { font-size: 0.87rem; color: var(--text-soft); line-height: 1.6; }
+  .rule-tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; margin-right: 6px; margin-top: 6px; }
+
+  /* ── MODERATION TAB ── */
+  .mod-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .mod-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+  .alert-card {
+    background: #fff;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    border-left: 4px solid transparent;
+  }
+  .alert-card.pending { border-left-color: var(--amber); }
+  .alert-card.resolved { border-left-color: var(--green); opacity: 0.7; }
+  .alert-icon { font-size: 1.4rem; flex-shrink: 0; }
+  .alert-info { flex: 1; }
+  .alert-msg { font-size: 0.9rem; font-weight: 600; margin-bottom: 3px; }
+  .alert-sub { font-size: 0.8rem; color: var(--text-soft); }
+  .btn-sm {
+    padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 600;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; border: none;
+  }
+  .btn-approve { background: var(--green-light); color: var(--green); }
+  .btn-reject { background: #fde8e8; color: var(--red); }
+
+  /* ── RGPD BANNER ── */
+  .rgpd-banner {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: #1a1a2e;
+    color: #fff;
+    padding: 18px 28px;
+    display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    z-index: 999;
+    box-shadow: 0 -4px 24px rgba(0,0,0,0.25);
+    animation: slideUp2 0.4s ease;
+  }
+  @keyframes slideUp2 { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .rgpd-text { flex: 1; font-size: 0.85rem; line-height: 1.6; min-width: 260px; opacity: 0.92; }
+  .rgpd-text strong { color: #fff; }
+  .rgpd-text a { color: #90caf9; text-decoration: underline; cursor: pointer; }
+  .rgpd-btns { display: flex; gap: 10px; flex-shrink: 0; }
+  .btn-rgpd-accept {
+    background: var(--green); color: #fff; border: none;
+    padding: 10px 22px; border-radius: 8px; font-weight: 700;
+    font-family: 'DM Sans',sans-serif; cursor: pointer; font-size: 0.9rem;
+  }
+  .btn-rgpd-decline {
+    background: transparent; color: #aaa; border: 1px solid #555;
+    padding: 10px 18px; border-radius: 8px; font-weight: 500;
+    font-family: 'DM Sans',sans-serif; cursor: pointer; font-size: 0.9rem;
+  }
+  .btn-rgpd-decline:hover { border-color: #aaa; color: #fff; }
+
+  /* ── NOTIFICATION BELL ── */
+  .notif-btn {
+    position: relative; background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.3); color: #fff;
+    width: 38px; height: 38px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 1.1rem; transition: background 0.2s;
+  }
+  .notif-btn:hover { background: rgba(255,255,255,0.25); }
+  .notif-badge {
+    position: absolute; top: -4px; right: -4px;
+    background: var(--red); color: #fff;
+    font-size: 0.65rem; font-weight: 800;
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--bark-dark);
+  }
+
+  /* ── STAR RATING ── */
+  .rating-section { margin: 16px 0; padding: 14px; background: var(--warm); border-radius: var(--radius-sm); }
+  .rating-label { font-size: 0.82rem; font-weight: 600; color: var(--text-soft); margin-bottom: 8px; }
+  .stars { display: flex; gap: 4px; cursor: pointer; }
+  .star { font-size: 1.5rem; color: #ddd; transition: color 0.15s; }
+  .star.active { color: #f5a623; }
+  .rating-count { font-size: 0.78rem; color: var(--text-soft); margin-top: 4px; }
+
+  /* ── PANNEAU NOTIFICATIONS ── */
+  .notif-panel {
+    display: none;
+    position: fixed; top: 70px; right: 16px;
+    width: 360px; max-height: 520px;
+    background: #fff; border-radius: var(--radius);
+    box-shadow: 0 12px 48px rgba(0,0,0,0.18);
+    z-index: 300; overflow: hidden;
+    animation: slideDown 0.2s ease;
+    flex-direction: column;
+  }
+  .notif-panel.open { display: flex; }
+  @keyframes slideDown { from { opacity:0; transform:translateY(-10px); } to { opacity:1; transform:translateY(0); } }
+
+  .notif-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--bark-dark); color: #fff;
+  }
+  .notif-header-title { font-weight: 700; font-size: 0.95rem; }
+  .notif-clear { font-size: 0.75rem; opacity: 0.75; cursor: pointer; text-decoration: underline; }
+  .notif-clear:hover { opacity: 1; }
+
+  .notif-list { overflow-y: auto; flex: 1; }
+  .notif-item {
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+    display: flex; gap: 12px; align-items: flex-start;
+    transition: background 0.15s; cursor: default;
+  }
+  .notif-item:hover { background: var(--warm); }
+  .notif-item.urgent { border-left: 4px solid var(--red); background: #fff8f8; }
+  .notif-item.warning { border-left: 4px solid var(--amber); background: #fffbf5; }
+  .notif-item.info { border-left: 4px solid var(--blue); background: #f5f9ff; }
+  .notif-item.success { border-left: 4px solid var(--green); background: #f5fbf7; }
+  .notif-icon { font-size: 1.4rem; flex-shrink: 0; margin-top: 2px; }
+  .notif-body { flex: 1; }
+  .notif-msg { font-size: 0.87rem; font-weight: 600; line-height: 1.4; margin-bottom: 3px; }
+  .notif-sub { font-size: 0.77rem; color: var(--text-soft); }
+  .notif-time { font-size: 0.7rem; color: var(--text-soft); flex-shrink: 0; margin-top: 3px; }
+  .notif-empty { padding: 40px; text-align: center; color: var(--text-soft); font-size: 0.88rem; }
+
+  /* ── ÉCHANGES EN COURS (dans notif panel) ── */
+  .notif-section-title {
+    padding: 10px 18px 6px;
+    font-size: 0.7rem; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-soft); background: var(--cream);
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* ── URGENCY BADGE ON BELL ── */
+  .notif-badge.urgent-badge { background: var(--red) !important; animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1);} 50%{transform:scale(1.2);} }
+
+  /* ── SERVICES TAB ── */
+  .services-hero {
+    background: linear-gradient(135deg, #4A7C59, #2d5c3d);
+    color: #fff; border-radius: var(--radius);
+    padding: 28px 32px; margin-bottom: 24px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  }
+  .services-hero h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; margin-bottom: 6px; }
+  .services-hero p { opacity: 0.85; font-size: 0.88rem; max-width: 420px; line-height: 1.6; }
+  .btn-service-post {
+    background: #fff; color: var(--green); border: none;
+    padding: 12px 22px; border-radius: var(--radius-sm);
+    font-size: 0.92rem; font-weight: 700; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; white-space: nowrap; transition: opacity 0.2s;
+  }
+  .btn-service-post:hover { opacity: 0.88; }
+  .services-filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .svc-chip {
+    padding: 7px 16px; border-radius: 20px; font-size: 0.83rem; font-weight: 600;
+    cursor: pointer; border: 2px solid var(--border); background: #fff;
+    color: var(--text-soft); transition: all 0.15s;
+  }
+  .svc-chip:hover { border-color: var(--green); color: var(--green); }
+  .svc-chip.active { background: var(--green); color: #fff; border-color: var(--green); }
+  .service-card {
+    background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 20px; margin-bottom: 14px;
+    display: flex; gap: 16px; align-items: flex-start;
+    border-left: 4px solid var(--green);
+    transition: box-shadow 0.2s, transform 0.2s;
+    animation: fadeUp 0.3s ease both; cursor: pointer;
+  }
+  .service-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+  .service-card.demande { border-left-color: var(--amber); }
+  .svc-icon-wrap {
+    width: 52px; height: 52px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; flex-shrink: 0; background: var(--green-light);
+  }
+  .service-card.demande .svc-icon-wrap { background: var(--amber-light); }
+  .svc-body { flex: 1; }
+  .svc-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .svc-title { font-size: 1rem; font-weight: 700; }
+  .svc-pill { padding: 3px 10px; border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pill-offre { background: var(--green-light); color: var(--green); }
+  .pill-demande { background: var(--amber-light); color: var(--amber); }
+  .svc-desc { font-size: 0.85rem; color: var(--text-soft); line-height: 1.6; margin-bottom: 12px; }
+  .svc-footer { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .svc-meta { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-soft); flex-wrap: wrap; }
+  .svc-cat-tag { background: var(--warm); color: var(--bark); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .svc-dispo { background: var(--green-light); color: var(--green); padding: 3px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+  .btn-svc-contact {
+    background: var(--green); color: #fff; border: none;
+    padding: 8px 18px; border-radius: 8px; font-size: 0.83rem; font-weight: 700;
+    font-family: 'DM Sans', sans-serif; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-svc-contact:hover { background: var(--bark-dark); }
+  .service-card.demande .btn-svc-contact { background: var(--amber); }
+  .service-card.demande .btn-svc-contact:hover { background: var(--bark-dark); }
+
+  /* ── MESSAGERIE ── */
+  .msg-layout { display: flex; gap: 0; height: calc(100vh - 175px); min-height: 400px; background:#fff; border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+  .msg-list { width: 280px; border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+  .msg-list-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 0.9rem; display:flex; align-items:center; justify-content:space-between; }
+  .conv-item { padding: 14px 16px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.15s; display:flex; gap:10px; align-items:center; }
+  .conv-item:hover { background: var(--warm); }
+  .conv-item.active { background: var(--warm); border-left: 3px solid var(--bark); }
+  .conv-info { flex:1; overflow:hidden; }
+  .conv-name { font-size: 0.88rem; font-weight: 600; }
+  .conv-preview { font-size: 0.78rem; color: var(--text-soft); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px; }
+  .conv-unread { background: var(--bark-dark); color:#fff; font-size:0.68rem; font-weight:800; padding: 2px 7px; border-radius:10px; flex-shrink:0; }
+
+  .msg-chat { flex:1; display:flex; flex-direction:column; }
+  .msg-chat-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display:flex; align-items:center; gap:10px; font-weight:700; }
+  .msg-chat-subject { font-size:0.78rem; color:var(--text-soft); font-weight:400; }
+  .msg-bubbles { flex:1; overflow-y:auto; padding: 20px; display:flex; flex-direction:column; gap:12px; }
+  .bubble { max-width: 70%; padding: 10px 14px; border-radius: 14px; font-size: 0.88rem; line-height:1.5; }
+  .bubble.them { background: var(--warm); border-bottom-left-radius: 4px; align-self: flex-start; }
+  .bubble.me { background: var(--bark-dark); color:#fff; border-bottom-right-radius: 4px; align-self: flex-end; }
+  .bubble-time { font-size:0.7rem; opacity:0.6; margin-top:4px; }
+  .msg-input-bar { padding: 14px 16px; border-top: 1px solid var(--border); display:flex; gap:10px; }
+  .msg-input { flex:1; padding:10px 14px; border:1.5px solid var(--border); border-radius: var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:0.9rem; }
+  .msg-input:focus { outline:none; border-color:var(--bark-light); }
+  .btn-send { background: var(--bark-dark); color:#fff; border:none; padding:10px 18px; border-radius: var(--radius-sm); font-family:'DM Sans',sans-serif; font-weight:700; cursor:pointer; transition:background 0.2s; }
+  .btn-send:hover { background: var(--bark); }
+  .msg-empty { flex:1; display:flex; align-items:center; justify-content:center; color:var(--text-soft); font-size:0.9rem; flex-direction:column; gap:8px; }
+
+  /* ── RGPD POLICY MODAL ── */
+  .policy-section { margin-bottom: 20px; }
+  .policy-section h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--bark-dark); }
+  .policy-section p, .policy-section li { font-size: 0.85rem; color: var(--text-soft); line-height: 1.7; }
+  .policy-section ul { padding-left: 18px; }
+
+  /* ── TOASTS ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    background: var(--bark-dark); color: #fff;
+    padding: 14px 20px; border-radius: var(--radius-sm);
+    font-size: 0.9rem; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    z-index: 500; display: none;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn { from { transform: translateX(50px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .cards-grid { grid-template-columns: 1fr 1fr; }
+    .modal-info-grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .cards-grid { grid-template-columns: 1fr; }
+  }
+
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <span class="logo-icon">🤝</span>
+    <div>
+      BOBECO
+      <div style="font-family:'DM Sans',sans-serif;font-size:0.62rem;font-weight:400;opacity:0.75;letter-spacing:0.03em;margin-top:1px">🌿 Préserve ton porte-monnaie et la planète</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="header-badge">Bêta</span>
+    <div class="notif-btn" onclick="toggleNotifPanel()" title="Notifications" id="notif-btn">
+      🔔
+      <span class="notif-badge" id="notif-count">4</span>
+    </div>
+    <button class="btn-header" onclick="openPostModal()">+ Publier</button>
+    <button class="btn-header" onclick="showTab('moderation')" style="background:rgba(201,125,46,0.3);border-color:var(--amber)">🛡 Modération</button>
+  </div>
+</header>
+
+<!-- TABS -->
+<div class="tabs-bar">
+  <div class="tab active" onclick="showTab('annonces')" id="tab-annonces">
+    📢 Annonces <span class="tab-count" id="cnt-annonces">12</span>
+  </div>
+  <div class="tab" onclick="showTab('reglement')" id="tab-reglement">
+    📋 Règlement
+  </div>
+  <div class="tab" onclick="showTab('moderation')" id="tab-moderation">
+    🛡 Modération <span class="tab-count" id="cnt-mod">3</span>
+  </div>
+  <div class="tab" onclick="showTab('messagerie')" id="tab-messagerie">
+    💬 Messagerie <span class="tab-count" id="cnt-msg">2</span>
+  </div>
+  <div class="tab" onclick="showTab('services')" id="tab-services">
+    🛠 Services <span class="tab-count" id="cnt-services">8</span>
+  </div>
+  <div class="tab" onclick="showTab('recherche')" id="tab-recherche">
+    🔍 Recherche <span class="tab-count" id="cnt-recherche">0</span>
+  </div>
+  <div class="tab" onclick="showTab('aide')" id="tab-aide">
+    ❓ Aide
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-wrap">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <button class="btn-post" onclick="openPostModal()">
+      ✚ Publier une annonce
+    </button>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Catégories</div>
+      <div class="filter-chip active" onclick="filterCards('all', this)" id="chip-all">
+        <span class="filter-dot dot-all"></span> Tout afficher
+      </div>
+      <div class="filter-chip" onclick="filterCards('don', this)" id="chip-don">
+        <span class="filter-dot dot-don"></span> Dons 🎁
+      </div>
+      <div class="filter-chip" onclick="filterCards('pret', this)" id="chip-pret">
+        <span class="filter-dot dot-pret"></span> Prêts 🤲
+      </div>
+      <div class="filter-chip" onclick="filterCards('location', this)" id="chip-location">
+        <span class="filter-dot dot-location"></span> Locations 🔑
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title">Statistiques</div>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num" id="stat-don">5</div>
+          <div class="stat-label">Dons</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-pret">4</div>
+          <div class="stat-label">Prêts</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num" id="stat-location">3</div>
+          <div class="stat-label">Locations</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">12</div>
+          <div class="stat-label">Total</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- CONTENT AREA -->
+  <main class="content">
+
+    <!-- ══ TAB: ANNONCES ══ -->
+    <div id="page-annonces">
+      <div class="search-bar">
+        <input class="search-input" type="text" placeholder="🔍  Rechercher une annonce..." oninput="searchCards(this.value)">
+        <button class="btn-sort">⟨⟩ Trier</button>
+      </div>
+      <div class="cards-grid" id="cards-grid"></div>
+    </div>
+
+    <!-- ══ TAB: RÈGLEMENT ══ -->
+    <div id="page-reglement" class="hidden reglement-wrap">
+      <div class="reglement-hero">
+        <h2>Règlement de la plateforme</h2>
+        <p>Ces règles garantissent une expérience d'échange agréable, juste et sécurisée pour tous les collègues sur BOBECO.</p>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">✅</div>
+        <div>
+          <div class="rule-title">1. Objets autorisés</div>
+          <div class="rule-text">Tout objet en bon état, légal, et pouvant être transporté sans danger. Les objets doivent être propres et décrits fidèlement. Les médicaments, substances contrôlées, armes et objets dangereux sont strictement interdits.</div>
+          <span class="rule-tag" style="background:var(--green-light);color:var(--green)">Don</span>
+          <span class="rule-tag" style="background:var(--blue-light);color:var(--blue)">Prêt</span>
+          <span class="rule-tag" style="background:var(--amber-light);color:var(--amber)">Location</span>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">📸</div>
+        <div>
+          <div class="rule-title">2. Photos obligatoires</div>
+          <div class="rule-text">Chaque annonce doit contenir au minimum une photo réelle de l'objet. Les photos doivent être récentes, nettes et représentatives. Les images génériques ou de catalogue sont interdites.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">💰</div>
+        <div>
+          <div class="rule-title">3. Transactions financières (Locations)</div>
+          <div class="rule-text">Les locations doivent indiquer clairement le tarif, la durée, et les conditions de restitution. Un accord écrit (via la messagerie de l'app) est fortement recommandé. En cas de dommage, les parties s'engagent à résoudre le litige à l'amiable en premier lieu.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">🤝</div>
+        <div>
+          <div class="rule-title">4. Respect et courtoisie</div>
+          <div class="rule-text">Les échanges doivent rester respectueux. Tout message offensant, discriminatoire ou harcelant entraînera la suspension immédiate du compte. Cette plateforme est un espace de confiance entre collègues.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">⏰</div>
+        <div>
+          <div class="rule-title">5. Disponibilité et réponses</div>
+          <div class="rule-text">Les auteurs d'annonces s'engagent à répondre dans un délai de 48h. Une annonce sans réponse depuis 30 jours sera automatiquement archivée. Les objets prêtés doivent être restitués à la date convenue.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">🛡</div>
+        <div>
+          <div class="rule-title">6. Rôle du modérateur</div>
+          <div class="rule-text">Le modérateur valide les nouvelles annonces, traite les signalements et peut retirer toute annonce non conforme. Ses décisions sont définitives. Tout utilisateur peut signaler une annonce problématique via le bouton "⚑ Signaler".</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">🔒</div>
+        <div>
+          <div class="rule-title">7. Confidentialité</div>
+          <div class="rule-text">Les informations personnelles des utilisateurs ne doivent pas être partagées hors de la plateforme. Les échanges restent internes à l'entreprise. Aucune donnée n'est revendue à des tiers.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">⚖️</div>
+        <div>
+          <div class="rule-title">8. Responsabilité</div>
+          <div class="rule-text">L'entreprise met à disposition cette plateforme à titre de service interne. Elle ne peut être tenue responsable des échanges entre collègues. Chaque utilisateur agit sous sa propre responsabilité.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: MODÉRATION ══ -->
+    <div id="page-moderation" class="hidden">
+      <div class="mod-header">
+        <div class="mod-title">🛡 Espace Modérateur</div>
+        <span style="font-size:0.82rem;color:var(--text-soft)">3 éléments en attente</span>
+      </div>
+
+      <div style="margin-bottom:20px;padding:14px 18px;background:#FDF0E0;border-radius:var(--radius-sm);border-left:4px solid var(--amber);font-size:0.87rem;color:#7A4E12">
+        ⚠️ Cet espace est réservé aux modérateurs. Toute action est enregistrée.
+      </div>
+
+      <div class="alert-card pending">
+        <div class="alert-icon">🆕</div>
+        <div class="alert-info">
+          <div class="alert-msg">Nouvelle annonce — "Vélo de ville, très bon état"</div>
+          <div class="alert-sub">Postée par Marie L. · Il y a 2h · Don · 2 photos</div>
+        </div>
+        <button class="btn-sm btn-approve" onclick="moderateAction(this,'approve')">✓ Approuver</button>
+        <button class="btn-sm btn-reject" onclick="moderateAction(this,'reject')">✕ Rejeter</button>
+      </div>
+
+      <div class="alert-card pending">
+        <div class="alert-icon">⚑</div>
+        <div class="alert-info">
+          <div class="alert-msg">Signalement — "Perceuse 18V" (annonce #8)</div>
+          <div class="alert-sub">Signalée par Thomas B. · "Prix de location trop élevé" · Il y a 5h</div>
+        </div>
+        <button class="btn-sm btn-approve" onclick="moderateAction(this,'approve')">✓ Maintenir</button>
+        <button class="btn-sm btn-reject" onclick="moderateAction(this,'reject')">✕ Retirer</button>
+      </div>
+
+      <div class="alert-card pending">
+        <div class="alert-icon">🆕</div>
+        <div class="alert-info">
+          <div class="alert-msg">Nouvelle annonce — "Cours de guitare, 1h/semaine"</div>
+          <div class="alert-sub">Postée par Kevin M. · Il y a 1j · Prêt · 1 photo</div>
+        </div>
+        <button class="btn-sm btn-approve" onclick="moderateAction(this,'approve')">✓ Approuver</button>
+        <button class="btn-sm btn-reject" onclick="moderateAction(this,'reject')">✕ Rejeter</button>
+      </div>
+
+      <div class="alert-card resolved">
+        <div class="alert-icon">✅</div>
+        <div class="alert-info">
+          <div class="alert-msg">Annonce approuvée — "Livres de cuisine japonaise"</div>
+          <div class="alert-sub">Traitée par Admin · Hier</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: MESSAGERIE ══ -->
+    <div id="page-messagerie" class="hidden">
+      <div class="msg-layout">
+        <!-- liste conversations -->
+        <div class="msg-list">
+          <div class="msg-list-header">
+            Conversations
+            <span style="font-size:0.75rem;color:var(--text-soft);font-weight:400">2 non lus</span>
+          </div>
+          <div id="conv-list"></div>
+        </div>
+        <!-- zone chat -->
+        <div class="msg-chat" id="chat-area">
+          <div class="msg-empty">
+            <span style="font-size:2rem">💬</span>
+            Sélectionnez une conversation
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ TAB: SERVICES ══ -->
+    <div id="page-services" class="hidden">
+      <div class="services-hero">
+        <div>
+          <h2>🛠 Services entre collègues</h2>
+          <p>Proposez votre aide ou trouvez quelqu'un pour vous donner un coup de main — déménagement, bricolage, cours, garde d'enfants et bien plus !</p>
+        </div>
+        <button class="btn-service-post" onclick="openServiceModal()">✚ Publier un service</button>
+      </div>
+
+      <div class="services-filter-bar">
+        <div class="svc-chip active" onclick="filterServices('all',this)">🔀 Tout</div>
+        <div class="svc-chip" onclick="filterServices('offre',this)">✋ Offres</div>
+        <div class="svc-chip" onclick="filterServices('demande',this)">🙋 Demandes</div>
+        <div class="svc-chip" onclick="filterServices('demenagement',this)">📦 Déménagement</div>
+        <div class="svc-chip" onclick="filterServices('bricolage',this)">🔧 Bricolage</div>
+        <div class="svc-chip" onclick="filterServices('cours',this)">📚 Cours</div>
+        <div class="svc-chip" onclick="filterServices('enfants',this)">👶 Enfants</div>
+        <div class="svc-chip" onclick="filterServices('informatique',this)">💻 Informatique</div>
+        <div class="svc-chip" onclick="filterServices('transport',this)">🚗 Transport</div>
+        <div class="svc-chip" onclick="filterServices('autre',this)">🌟 Autre</div>
+      </div>
+
+      <div id="services-list"></div>
+    </div>
+
+    <!-- ══ TAB: RECHERCHE ══ -->
+    <div id="page-recherche" class="hidden">
+      <div class="recherche-hero">
+        <div>
+          <h2>🔍 Je cherche…</h2>
+          <p>Vous ne trouvez pas ce dont vous avez besoin dans les annonces ? Publiez votre demande — un collègue vous répondra peut-être !</p>
+        </div>
+        <button class="btn-recherche" onclick="openDemandeModal()">✚ Publier une demande</button>
+      </div>
+      <div id="demandes-list"></div>
+    </div>
+
+    <!-- ══ TAB: AIDE ══ -->
+    <div id="page-aide" class="hidden reglement-wrap">
+      <div class="reglement-hero" style="background:var(--blue)">
+        <h2>Centre d'aide</h2>
+        <p>Tout ce que vous devez savoir pour utiliser BOBECO efficacement.</p>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">📝</div>
+        <div>
+          <div class="rule-title">Comment publier une annonce ?</div>
+          <div class="rule-text">Cliquez sur le bouton "Publier une annonce" (barre latérale ou en-tête). Choisissez le type (Don, Prêt ou Location), remplissez le formulaire, ajoutez au moins une photo et soumettez. Votre annonce sera vérifiée par un modérateur avant publication.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">📬</div>
+        <div>
+          <div class="rule-title">Comment contacter un collègue ?</div>
+          <div class="rule-text">Cliquez sur une annonce qui vous intéresse, puis sur le bouton "Contacter". Un message sera envoyé via le système interne. Vos coordonnées ne sont jamais visibles publiquement.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">⚑</div>
+        <div>
+          <div class="rule-title">Signaler une annonce problématique</div>
+          <div class="rule-text">Chaque annonce dispose d'un bouton "Signaler". Décrivez brièvement le problème et soumettez. Un modérateur examinera votre signalement dans les 24h.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">🖼</div>
+        <div>
+          <div class="rule-title">Formats de photos acceptés</div>
+          <div class="rule-text">JPG, PNG, WEBP — taille maximale 5 Mo par photo. Jusqu'à 5 photos par annonce. Les photos doivent montrer l'objet réel dans son état actuel.</div>
+        </div>
+      </div>
+
+      <div class="rule-card">
+        <div class="rule-icon">📞</div>
+        <div>
+          <div class="rule-title">Contacter le modérateur</div>
+          <div class="rule-text">Pour toute question sur la plateforme, écrivez à <strong>bobeco@votre-entreprise.fr</strong> ou contactez directement le responsable RH désigné comme modérateur.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══ MODAL: DÉTAIL ANNONCE ══ -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="dm-title">Titre</span>
+      <button class="modal-close" onclick="closeModal('detail-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-img" id="dm-img"></div>
+      <div class="modal-meta" id="dm-meta"></div>
+      <p class="modal-desc" id="dm-desc"></p>
+      <div class="modal-info-grid" id="dm-grid"></div>
+      <div class="rating-section">
+        <div class="rating-label">⭐ Évaluer cet échange</div>
+        <div class="stars" id="star-row" onmouseleave="resetStars()">
+          <span class="star" onmouseover="hoverStar(1)" onclick="rateStar(1)">★</span>
+          <span class="star" onmouseover="hoverStar(2)" onclick="rateStar(2)">★</span>
+          <span class="star" onmouseover="hoverStar(3)" onclick="rateStar(3)">★</span>
+          <span class="star" onmouseover="hoverStar(4)" onclick="rateStar(4)">★</span>
+          <span class="star" onmouseover="hoverStar(5)" onclick="rateStar(5)">★</span>
+        </div>
+        <div class="rating-count" id="rating-count">Pas encore évalué</div>
+      </div>
+      <button class="btn-contact" id="dm-contact" onclick="contactAction()">📩 Contacter le collègue</button>
+      <button class="btn-sm btn-reject" style="width:100%;margin-top:10px;padding:10px" onclick="reportAction()">⚑ Signaler cette annonce</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: PUBLIER ══ -->
+<div class="modal-overlay" id="post-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📢 Publier une annonce</span>
+      <button class="modal-close" onclick="closeModal('post-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">Type d'annonce <span>*</span></div>
+        <div class="type-select">
+          <button class="type-btn active-don" onclick="selectType('don',this)" id="type-don">
+            <span>🎁</span><span>Don</span>
+          </button>
+          <button class="type-btn" onclick="selectType('pret',this)" id="type-pret">
+            <span>🤲</span><span>Prêt</span>
+          </button>
+          <button class="type-btn" onclick="selectType('location',this)" id="type-location">
+            <span>🔑</span><span>Location</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Titre <span>*</span></label>
+        <input class="form-input" type="text" id="new-title" placeholder="Ex : Vélo de ville 7 vitesses">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description <span>*</span></label>
+        <textarea class="form-textarea" id="new-desc" placeholder="Décrivez l'objet, son état, les conditions d'échange..."></textarea>
+      </div>
+
+      <div id="price-group" class="form-group hidden">
+        <label class="form-label">Tarif (€/jour)</label>
+        <input class="form-input" type="number" id="new-price" placeholder="0.00">
+      </div>
+
+      <div id="date-group" class="form-group hidden">
+        <label class="form-label">📅 Date de restitution souhaitée</label>
+        <input class="form-input" type="date" id="new-date">
+        <div style="font-size:0.78rem;color:var(--text-soft);margin-top:5px">
+          🔔 Un rappel automatique sera envoyé 48h avant et le jour J
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catégorie</label>
+        <select class="form-select" id="new-cat">
+          <option>Mobilité (vélos, trottinettes…)</option>
+          <option>Bricolage & Outils</option>
+          <option>Cuisine & Maison</option>
+          <option>Sport & Loisirs</option>
+          <option>Livres & Jeux</option>
+          <option>Vêtements & Accessoires</option>
+          <option>Électronique</option>
+          <option>Jardinage</option>
+          <option>Services & Compétences</option>
+          <option>Autres</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Photos <span>*</span> (min. 1, max. 5)</label>
+        <div class="photo-upload" onclick="document.getElementById('photo-input').click()">
+          <input type="file" id="photo-input" accept="image/*" multiple onchange="previewPhotos(this)">
+          <div class="photo-icon">📷</div>
+          <div class="photo-text">Cliquez pour ajouter des photos<br><small>JPG, PNG, WEBP — max 5 Mo chacune</small></div>
+        </div>
+        <div id="photo-preview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"></div>
+      </div>
+
+      <div style="background:var(--amber-light);border-radius:var(--radius-sm);padding:12px 14px;font-size:0.83rem;color:#7A4E12;margin-bottom:18px">
+        ⚠️ Votre annonce sera examinée par un modérateur avant d'être publiée.
+      </div>
+
+      <button class="btn-contact" onclick="submitPost()">✓ Soumettre l'annonce</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: SERVICE ══ -->
+<div class="modal-overlay" id="service-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🛠 Publier un service</span>
+      <button class="modal-close" onclick="closeModal('service-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="form-group">
+        <div class="form-label">Type de publication <span>*</span></div>
+        <div class="type-select">
+          <button class="type-btn active-don" onclick="selectSvcType('offre',this)" id="svctype-offre">
+            <span>✋</span><span>J'offre</span>
+          </button>
+          <button class="type-btn" onclick="selectSvcType('demande',this)" id="svctype-demande">
+            <span>🙋</span><span>Je cherche</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Titre <span>*</span></label>
+        <input class="form-input" type="text" id="svc-title" placeholder="Ex : Aide déménagement, Cours de guitare, Garde de chat…">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description <span>*</span></label>
+        <textarea class="form-textarea" id="svc-desc" placeholder="Décrivez le service proposé ou recherché, vos disponibilités, conditions éventuelles…"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catégorie <span>*</span></label>
+        <select class="form-select" id="svc-cat">
+          <option value="demenagement">📦 Déménagement & Transport</option>
+          <option value="bricolage">🔧 Bricolage & Travaux</option>
+          <option value="cours">📚 Cours & Formations</option>
+          <option value="enfants">👶 Garde d'enfants & Animaux</option>
+          <option value="informatique">💻 Informatique & Tech</option>
+          <option value="transport">🚗 Covoiturage & Transport</option>
+          <option value="cuisine">🍽 Cuisine & Traiteur</option>
+          <option value="jardinage">🌿 Jardinage & Extérieur</option>
+          <option value="sante">🧘 Sport, Santé & Bien-être</option>
+          <option value="autre">🌟 Autre</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Disponibilités</label>
+        <input class="form-input" type="text" id="svc-dispo" placeholder="Ex : Week-ends, soirs après 18h, sur demande…">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Compensation souhaitée</label>
+        <select class="form-select" id="svc-comp">
+          <option value="gratuit">Totalement gratuit 🎁</option>
+          <option value="recip">Service en échange (troc) 🔄</option>
+          <option value="frais">Remboursement des frais uniquement ⛽</option>
+          <option value="negociable">À discuter ensemble 💬</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">📅 Date du rendez-vous (si connue)</label>
+        <input class="form-input" type="date" id="svc-rdv-date">
+        <div style="font-size:0.78rem;color:var(--text-soft);margin-top:5px">
+          🔔 Une confirmation sera envoyée à la réservation + rappel la veille
+        </div>
+      </div>
+
+      <div style="background:var(--green-light);border-radius:var(--radius-sm);padding:12px 14px;font-size:0.83rem;color:#2d5c3d;margin-bottom:18px">
+        ✅ Votre service sera visible par tous vos collègues après validation par le modérateur.
+      </div>
+
+      <button class="btn-contact" style="background:var(--green)" onclick="submitService()">✓ Publier mon service</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: DEMANDE ══ -->
+<div class="modal-overlay" id="demande-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔍 Publier une demande</span>
+      <button class="modal-close" onclick="closeModal('demande-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--blue-light);border-radius:var(--radius-sm);padding:12px 14px;font-size:0.85rem;color:var(--blue);margin-bottom:20px">
+        💡 Décrivez ce que vous recherchez — un collègue qui peut vous aider verra votre demande et vous contactera.
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ce que vous recherchez <span>*</span></label>
+        <input class="form-input" type="text" id="dem-title" placeholder="Ex : Vélo enfant 5–7 ans, perceuse, cours de cuisine…">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Description <span>*</span></label>
+        <textarea class="form-textarea" id="dem-desc" placeholder="Précisez vos besoins : état souhaité, durée, budget éventuel, disponibilités…"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Catégorie</label>
+        <select class="form-select" id="dem-cat">
+          <option>Mobilité (vélos, trottinettes…)</option>
+          <option>Bricolage & Outils</option>
+          <option>Cuisine & Maison</option>
+          <option>Sport & Loisirs</option>
+          <option>Livres & Jeux</option>
+          <option>Vêtements & Accessoires</option>
+          <option>Électronique</option>
+          <option>Jardinage</option>
+          <option>Services & Compétences</option>
+          <option>Autres</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Type de demande</label>
+        <select class="form-select" id="dem-type">
+          <option value="don">Je veux un don 🎁</option>
+          <option value="pret">Je cherche un prêt 🤲</option>
+          <option value="location">Je cherche une location 🔑</option>
+          <option value="tout">Peu importe (don, prêt ou location)</option>
+        </select>
+      </div>
+
+      <button class="btn-contact" onclick="submitDemande()">✓ Publier ma demande</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANNEAU NOTIFICATIONS ══ -->
+<div class="notif-panel" id="notif-panel">
+  <div class="notif-header">
+    <span class="notif-header-title">🔔 Notifications</span>
+    <span class="notif-clear" onclick="clearAllNotifs()">Tout marquer comme lu</span>
+  </div>
+  <div class="notif-list" id="notif-list"></div>
+</div>
+
+<!-- ══ RGPD BANNER ══ -->
+<div class="rgpd-banner" id="rgpd-banner">
+  <div class="rgpd-text">
+    <strong>🔒 BOBECO respecte vos données personnelles.</strong><br>
+    Cette application collecte uniquement les données nécessaires à son fonctionnement (nom, annonces, messages internes). Vos données restent confidentielles et ne sont jamais revendues.
+    <a onclick="openModal('privacy-modal')">Lire la politique de confidentialité complète →</a>
+  </div>
+  <div class="rgpd-btns">
+    <button class="btn-rgpd-decline" onclick="rgpdDecline()">Refuser</button>
+    <button class="btn-rgpd-accept" onclick="rgpdAccept()">✓ J'accepte</button>
+  </div>
+</div>
+
+<!-- ══ MODAL: POLITIQUE DE CONFIDENTIALITÉ ══ -->
+<div class="modal-overlay" id="privacy-modal">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-header">
+      <span class="modal-title">🔒 Politique de confidentialité</span>
+      <button class="modal-close" onclick="closeModal('privacy-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--blue-light);border-radius:var(--radius-sm);padding:12px 16px;font-size:0.82rem;color:var(--blue);margin-bottom:20px">
+        Conformément au <strong>Règlement Général sur la Protection des Données (RGPD)</strong> — Règlement UE 2016/679 — et à la loi Informatique et Libertés, voici comment BOBECO traite vos données.
+      </div>
+
+      <div class="policy-section">
+        <h3>1. Responsable du traitement</h3>
+        <p>Le responsable du traitement est votre entreprise, représentée par l'administrateur désigné de la plateforme BOBECO. Contact : <strong>bobeco@votre-entreprise.fr</strong></p>
+      </div>
+
+      <div class="policy-section">
+        <h3>2. Données collectées</h3>
+        <ul>
+          <li>Nom et prénom (pour identification sur la plateforme)</li>
+          <li>Contenu des annonces publiées (titre, description, photos)</li>
+          <li>Messages échangés entre collègues via la messagerie interne</li>
+          <li>Date et heure des publications</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>3. Finalités et base légale</h3>
+        <p>Les données sont collectées uniquement pour permettre les échanges entre collègues (dons, prêts, locations). Base légale : <strong>consentement de l'utilisateur</strong> (Art. 6.1.a du RGPD).</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>4. Durée de conservation</h3>
+        <ul>
+          <li>Annonces actives : conservées jusqu'à suppression par l'auteur ou archivage automatique à 90 jours</li>
+          <li>Messages : conservés 12 mois</li>
+          <li>Données de compte : supprimées sur demande ou au départ du salarié</li>
+        </ul>
+      </div>
+
+      <div class="policy-section">
+        <h3>5. Vos droits</h3>
+        <p>Conformément au RGPD, vous disposez des droits suivants :</p>
+        <ul>
+          <li><strong>Droit d'accès</strong> — consulter vos données personnelles</li>
+          <li><strong>Droit de rectification</strong> — corriger vos informations</li>
+          <li><strong>Droit à l'effacement</strong> — supprimer votre compte et vos données</li>
+          <li><strong>Droit d'opposition</strong> — vous opposer à certains traitements</li>
+          <li><strong>Droit à la portabilité</strong> — obtenir une copie de vos données</li>
+        </ul>
+        <p style="margin-top:8px">Pour exercer ces droits : <strong>bobeco@votre-entreprise.fr</strong></p>
+      </div>
+
+      <div class="policy-section">
+        <h3>6. Sécurité</h3>
+        <p>Les données sont accessibles uniquement aux collègues connectés à la plateforme interne. Aucune donnée n'est transmise à des tiers ni utilisée à des fins commerciales.</p>
+      </div>
+
+      <div class="policy-section">
+        <h3>7. Réclamation</h3>
+        <p>Vous pouvez introduire une réclamation auprès de la <strong>CNIL</strong> (Commission Nationale de l'Informatique et des Libertés) : <strong>www.cnil.fr</strong></p>
+      </div>
+
+      <button class="btn-contact" onclick="rgpdAccept(); closeModal('privacy-modal')">✓ J'accepte et je ferme</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── SUPABASE ──
+const { createClient } = supabase;
+const SUPA_URL  = 'https://qkzkadgpmqilvrgnnrpvg.supabase.co';
+const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFremthZGdwbXFpbHZyZ25ycHZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MDA1ODEsImV4cCI6MjA5MjE3NjU4MX0.r2W-ejbkfqaS1JCwwy62U-FoggzCaah2XgYrayK1Zic';
+const db = createClient(SUPA_URL, SUPA_KEY);
+
+// ── DATA ──
+const USERS = [
+  {name:"Sophie M.", color:"#8B6A4A"}, {name:"Thomas B.", color:"#3D6B8C"},
+  {name:"Marie L.", color:"#4A7C59"}, {name:"Kevin M.", color:"#C97D2E"},
+  {name:"Laure D.", color:"#9B59B6"}, {name:"Paul R.", color:"#E74C3C"}
+];
+
+
+
+
+let currentFilter = 'all';
+let currentType = 'don';
+let selectedItem = null;
+
+// ── INIT — chargement depuis Supabase ──
+async function initApp() {
+  showLoading(true);
+  await Promise.all([ loadAnnonces(), loadServices(), loadDemandes() ]);
+  showLoading(false);
+  updateStats();
+  renderDemandes();
+  renderServices();
+  renderConvList();
+  renderNotifPanel();
+}
+
+function showLoading(on) {
+  const g = document.getElementById('cards-grid');
+  if (g) g.innerHTML = on
+    ? '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-soft)">⏳ Chargement des annonces…</div>'
+    : '';
+}
+
+async function loadAnnonces() {
+  const { data, error } = await db.from('annonces').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); items = DEMO_ITEMS; }
+  else if (data && data.length > 0) {
+    items = data.map(r => ({
+      id: r.id, type: r.type, title: r.title, desc: r.description,
+      cat: r.cat, emoji: r.emoji || '📦', price: r.price || 0,
+      user_name: r.user_name, user_color: r.user_color || '#8B6A4A',
+      date: new Date(r.created_at).toLocaleDateString('fr-FR')
+    }));
+  } else { items = DEMO_ITEMS; }
+  renderCards(items);
+}
+
+async function loadServices() {
+  const { data, error } = await db.from('services').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  if (data && data.length > 0) {
+    services = data.map(r => ({
+      id: r.id, kind: r.kind, title: r.title, desc: r.description,
+      cat: r.cat, dispo: r.dispo || 'À définir', comp: r.comp || 'gratuit',
+      user_name: r.user_name, user_color: r.user_color || '#8B6A4A',
+      date: new Date(r.created_at).toLocaleDateString('fr-FR')
+    }));
+  }
+}
+
+async function loadDemandes() {
+  const { data, error } = await db.from('demandes').select('*').order('created_at', { ascending: false });
+  if (error) { console.error(error); return; }
+  if (data && data.length > 0) {
+    demandes = data.map(r => ({
+      id: r.id, title: r.title, desc: r.description,
+      cat: r.cat, type: r.type,
+      user_name: r.user_name, user_color: r.user_color || '#8B6A4A',
+      date: new Date(r.created_at).toLocaleDateString('fr-FR')
+    }));
+  }
+}
+
+// Données de démo si Supabase vide
+const DEMO_ITEMS = [
+  {id:1,type:"don",  title:"Encyclopédies Larousse (12 vol.)",   desc:"Jeu complet en bon état. Idéal pour bibliothèque familiale.",  cat:"Livres & Jeux",    emoji:"📚", price:0,   user_name:"Sophie M.", user_color:"#8B6A4A", date:"Démo"},
+  {id:2,type:"location", title:"Perceuse 18V + 40 forets",       desc:"Perceuse Bosch 18V avec batterie et 40 forets variés.",        cat:"Bricolage",        emoji:"🔧", price:5,   user_name:"Thomas B.", user_color:"#3D6B8C", date:"Démo"},
+  {id:3,type:"pret", title:"Tente 4 places",                     desc:"Tente festival imperméable. Montage rapide.",                  cat:"Sport & Loisirs",  emoji:"⛺", price:0,   user_name:"Marie L.",  user_color:"#4A7C59", date:"Démo"},
+];
+let items = DEMO_ITEMS;
+
+function updateStats() {
+  document.getElementById('stat-don').textContent = items.filter(i=>i.type==='don').length;
+  document.getElementById('stat-pret').textContent = items.filter(i=>i.type==='pret').length;
+  document.getElementById('stat-location').textContent = items.filter(i=>i.type==='location').length;
+  document.getElementById('cnt-annonces').textContent = items.length;
+}
+
+// ── TABS ──
+function showTab(name) {
+  ['annonces','reglement','moderation','aide','recherche','messagerie','services'].forEach(t => {
+    document.getElementById('page-'+t).classList.add('hidden');
+    document.getElementById('tab-'+t).classList.remove('active');
+  });
+  document.getElementById('page-'+name).classList.remove('hidden');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── FILTER ──
+function filterCards(type, el) {
+  currentFilter = type;
+  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
+  el.classList.add('active');
+  const filtered = type==='all' ? items : items.filter(i=>i.type===type);
+  renderCards(filtered);
+}
+
+function searchCards(q) {
+  const filtered = items.filter(i => i.title.toLowerCase().includes(q.toLowerCase()) || i.desc.toLowerCase().includes(q.toLowerCase()));
+  renderCards(filtered);
+}
+
+// ── RENDER ──
+function renderCards(data) {
+  const grid = document.getElementById('cards-grid');
+  grid.innerHTML = '';
+  if (!data || data.length === 0) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--text-soft)">Aucune annonce trouvée 🔍</div>';
+    return;
+  }
+  data.forEach((item,i) => {
+    const uname = item.user_name || (USERS[item.user] ? USERS[item.user].name : 'Collègue');
+    const ucolor = item.user_color || (USERS[item.user] ? USERS[item.user].color : '#8B6A4A');
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.animationDelay = (i*0.05)+'s';
+    div.onclick = () => openDetail(item);
+    const badgeClass = item.type==='don'?'badge-don':item.type==='pret'?'badge-pret':'badge-location';
+    const badgeLabel = item.type==='don'?'Don':item.type==='pret'?'Prêt':'Location';
+    const priceLabel = item.type==='location'
+      ? `<span class="card-price">${item.price}€/j</span>`
+      : `<span class="card-free">Gratuit</span>`;
+    div.innerHTML = `
+      <div class="card-img">
+        <span>${item.emoji || '📦'}</span>
+        <span class="card-badge ${badgeClass}">${badgeLabel}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">${item.title}</div>
+        <div class="card-desc">${item.desc || item.description || ''}</div>
+        <div class="card-footer">
+          <div class="card-author">
+            <div class="avatar" style="background:${ucolor}">${uname.charAt(0)}</div>
+            ${uname}
+          </div>
+          ${priceLabel}
+        </div>
+      </div>`;
+    grid.appendChild(div);
+  });
+}
+
+// ── DETAIL MODAL ──
+function openDetail(item) {
+  selectedItem = item;
+  const u = USERS[item.user];
+  const bc = item.type==='don'?'badge-don':item.type==='pret'?'badge-pret':'badge-location';
+  const bl = item.type==='don'?'Don':item.type==='pret'?'Prêt':'Location';
+
+  document.getElementById('dm-title').textContent = item.title;
+  document.getElementById('dm-img').innerHTML = `<span style="font-size:4rem">${item.emoji}</span>`;
+  document.getElementById('dm-meta').innerHTML = `
+    <span class="card-badge ${bc}" style="position:relative;top:0;left:0">${bl}</span>
+    <span class="meta-tag" style="background:var(--warm);color:var(--text-soft)">${item.cat}</span>
+    <span class="meta-tag" style="background:var(--warm);color:var(--text-soft)">${item.date}</span>`;
+  document.getElementById('dm-desc').textContent = item.desc;
+  document.getElementById('dm-grid').innerHTML = `
+    <div class="info-item">
+      <div class="info-label">Proposé par</div>
+      <div class="info-value" style="display:flex;align-items:center;gap:8px">
+        <div class="avatar" style="background:${u.color};width:30px;height:30px;font-size:0.85rem">${u.name.charAt(0)}</div>
+        ${u.name}
+      </div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">${item.type==='location'?'Tarif':'Conditions'}</div>
+      <div class="info-value">${item.type==='location'?item.price+'€ / jour':'Gratuit'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Catégorie</div>
+      <div class="info-value">${item.cat}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Statut</div>
+      <div class="info-value" style="color:var(--green)">✓ Disponible</div>
+    </div>`;
+  document.getElementById('detail-modal').classList.add('open');
+}
+
+// ── POST MODAL ──
+function openPostModal() {
+  selectType('don', document.getElementById('type-don'));
+  document.getElementById('new-title').value = '';
+  document.getElementById('new-desc').value = '';
+  document.getElementById('new-price').value = '';
+  document.getElementById('photo-preview').innerHTML = '';
+  document.getElementById('post-modal').classList.add('open');
+}
+
+function selectType(type, btn) {
+  currentType = type;
+  ['don','pret','location'].forEach(t => {
+    const b = document.getElementById('type-'+t);
+    b.className = 'type-btn';
+  });
+  btn.classList.add('active-'+type);
+  document.getElementById('price-group').classList.toggle('hidden', type!=='location');
+  document.getElementById('date-group').classList.toggle('hidden', type==='don');
+}
+
+function previewPhotos(input) {
+  const preview = document.getElementById('photo-preview');
+  preview.innerHTML = '';
+  Array.from(input.files).slice(0,5).forEach(file => {
+    const url = URL.createObjectURL(file);
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:2px solid var(--border)';
+    preview.appendChild(img);
+  });
+}
+
+async function submitPost() {
+  const title = document.getElementById('new-title').value.trim();
+  const desc = document.getElementById('new-desc').value.trim();
+  if (!title || !desc) { showToast('⚠️ Remplissez le titre et la description'); return; }
+  const emojis = {'don':'🎁','pret':'🤲','location':'🔑'};
+  const retDate = document.getElementById('new-date').value;
+  const u = USERS[Math.floor(Math.random()*USERS.length)];
+
+  const newItem = {
+    type: currentType, title, description: desc,
+    cat: document.getElementById('new-cat').value,
+    emoji: emojis[currentType],
+    price: parseFloat(document.getElementById('new-price').value) || 0,
+    date_retour: retDate || null,
+    user_name: u.name, user_color: u.color
+  };
+
+  const { error } = await db.from('annonces').insert([newItem]);
+  if (error) { showToast('❌ Erreur lors de la sauvegarde'); console.error(error); return; }
+
+  await loadAnnonces();
+  updateStats();
+  closeModal('post-modal');
+  if (retDate && (currentType === 'pret' || currentType === 'location')) {
+    addRestitutionNotif(title, new Date(retDate).toLocaleDateString('fr-FR'));
+    showToast('✅ Annonce sauvegardée — rappels programmés !');
+  } else {
+    showToast('✅ Annonce publiée et sauvegardée dans la base de données !');
+  }
+}
+
+// ── ACTIONS ──
+function contactAction() {
+  closeModal('detail-modal');
+  showToast('📩 Message envoyé à ' + USERS[selectedItem.user].name);
+}
+function reportAction() {
+  closeModal('detail-modal');
+  showToast('⚑ Signalement transmis au modérateur');
+}
+function moderateAction(btn, action) {
+  const card = btn.closest('.alert-card');
+  card.classList.remove('pending');
+  card.classList.add('resolved');
+  card.querySelectorAll('button').forEach(b=>b.remove());
+  const msg = action==='approve' ? '✅ Approuvé' : '✕ Rejeté';
+  card.querySelector('.alert-sub').textContent += ' · ' + msg;
+  showToast(action==='approve' ? '✅ Annonce approuvée' : '✕ Annonce retirée');
+  const cnt = document.querySelector('#cnt-mod');
+  cnt.textContent = Math.max(0, parseInt(cnt.textContent)-1);
+}
+
+// ── DEMANDES (RECHERCHE) ──
+const CAT_EMOJIS = {
+  'Mobilité (vélos, trottinettes…)':'🚲','Bricolage & Outils':'🔧',
+  'Cuisine & Maison':'🍲','Sport & Loisirs':'⚽','Livres & Jeux':'📚',
+  'Vêtements & Accessoires':'👕','Électronique':'💻','Jardinage':'🌿',
+  'Services & Compétences':'🤝','Autres':'📦'
+};
+const TYPE_LABELS = { don:'Don 🎁', pret:'Prêt 🤲', location:'Location 🔑', tout:'Don / Prêt / Location' };
+
+let demandes = [
+  { id:1, title:"Vélo enfant 4–6 ans", desc:"Mon fils apprend à faire du vélo. Je cherche un petit vélo avec ou sans roues stabilisatrices, taille 14 ou 16 pouces.", cat:"Mobilité (vélos, trottinettes…)", type:"don", user:2, date:"Il y a 1j" },
+  { id:2, title:"Perceuse + mèches bois", desc:"Je dois faire quelques trous pour accrocher des étagères chez moi ce week-end. Prêt de 2–3 jours suffisant.", cat:"Bricolage & Outils", type:"pret", user:4, date:"Il y a 3h" },
+  { id:3, title:"Cours de couture débutant", desc:"Je cherche quelqu'un qui pourrait m'apprendre les bases de la couture, même 1 ou 2 séances. Merci !", cat:"Services & Compétences", type:"tout", user:1, date:"Il y a 2j" },
+];
+
+function renderDemandes() {
+  const list = document.getElementById('demandes-list');
+  list.innerHTML = '';
+  if (!demandes || demandes.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-soft)">Aucune demande pour l\'instant 🔍<br><small>Soyez le premier à publier !</small></div>';
+    return;
+  }
+  demandes.forEach((d, i) => {
+    const uname  = d.user_name  || (USERS[d.user] ? USERS[d.user].name  : 'Collègue');
+    const ucolor = d.user_color || (USERS[d.user] ? USERS[d.user].color : '#8B6A4A');
+    const emoji = CAT_EMOJIS[d.cat] || '📦';
+    const div = document.createElement('div');
+    div.className = 'demande-card';
+    div.style.animationDelay = (i*0.05)+'s';
+    div.innerHTML = `
+      <div class="demande-emoji">${emoji}</div>
+      <div class="demande-body">
+        <div class="demande-title">${d.title}</div>
+        <div class="demande-desc">${d.desc || d.description || ''}</div>
+        <div class="demande-footer">
+          <div class="demande-meta">
+            <div class="avatar" style="background:${ucolor};width:24px;height:24px;font-size:0.7rem">${uname.charAt(0)}</div>
+            ${uname} · ${d.date || 'Récent'}
+            <span class="demande-cat">${d.cat}</span>
+            <span class="demande-cat" style="background:var(--warm);color:var(--text-soft)">${TYPE_LABELS[d.type] || d.type}</span>
+          </div>
+          <button class="btn-repondre" onclick="repond('${d.title}', '${uname}')">📩 Je peux aider !</button>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('cnt-recherche').textContent = demandes.length;
+}
+
+function openDemandeModal() {
+  document.getElementById('dem-title').value = '';
+  document.getElementById('dem-desc').value = '';
+  document.getElementById('demande-modal').classList.add('open');
+}
+
+async function submitDemande() {
+  const title = document.getElementById('dem-title').value.trim();
+  const desc  = document.getElementById('dem-desc').value.trim();
+  if (!title || !desc) { showToast('⚠️ Remplissez le titre et la description'); return; }
+  const u = USERS[Math.floor(Math.random() * USERS.length)];
+
+  const newD = {
+    title, description: desc,
+    cat:  document.getElementById('dem-cat').value,
+    type: document.getElementById('dem-type').value,
+    user_name: u.name, user_color: u.color
+  };
+
+  const { error } = await db.from('demandes').insert([newD]);
+  if (error) { showToast('❌ Erreur lors de la sauvegarde'); console.error(error); return; }
+
+  await loadDemandes();
+  renderDemandes();
+  closeModal('demande-modal');
+  showToast('✅ Demande publiée et sauvegardée !');
+}
+
+function repond(titre, nom) {
+  showToast('📩 Message envoyé à ' + nom + ' pour : ' + titre);
+}
+
+renderDemandes();
+
+// ── SERVICES ──
+const SVC_ICONS = {
+  demenagement:'📦', bricolage:'🔧', cours:'📚', enfants:'👶',
+  informatique:'💻', transport:'🚗', cuisine:'🍽', jardinage:'🌿',
+  sante:'🧘', autre:'🌟'
+};
+const SVC_CAT_LABELS = {
+  demenagement:'Déménagement', bricolage:'Bricolage', cours:'Cours & Formation',
+  enfants:'Garde d\'enfants', informatique:'Informatique', transport:'Covoiturage',
+  cuisine:'Cuisine', jardinage:'Jardinage', sante:'Sport & Santé', autre:'Autre'
+};
+const COMP_LABELS = {
+  gratuit:'Gratuit 🎁', recip:'Troc 🔄', frais:'Frais uniquement ⛽', negociable:'À discuter 💬'
+};
+
+let services = [
+  { id:1, kind:'offre', title:'Aide déménagement — camion 15m³', desc:'Je possède un camion fourgon 15m³. Disponible les week-ends pour aider à déménager. Je demande juste le remboursement du carburant. Bonne humeur exigée !', cat:'demenagement', dispo:'Week-ends', comp:'frais', user:4, date:'Il y a 2j' },
+  { id:2, kind:'demande', title:'Besoin d\'aide pour déménager mi-mai', desc:'Je cherche 2 ou 3 personnes pour m\'aider à déménager un appartement T3 au 2ème étage. Je prévois pizza + boissons en échange !', cat:'demenagement', dispo:'15–16 mai', comp:'recip', user:2, date:'Il y a 1j' },
+  { id:3, kind:'offre', title:'Cours d\'anglais niveau B1–B2', desc:'Je suis bilingue anglais-français. Je propose des séances d\'1h pour améliorer l\'oral et l\'écrit. Idéal pour préparer un entretien ou un voyage.', cat:'cours', dispo:'Soirs semaine', comp:'gratuit', user:0, date:'Il y a 3j' },
+  { id:4, kind:'offre', title:'Garde de chat pendant vos vacances', desc:'Passionnée par les animaux, je propose la garde de chats à votre domicile le temps de vos vacances. Je viens 1 à 2 fois par jour.', cat:'enfants', dispo:'Été & vacances scolaires', comp:'gratuit', user:5, date:'Il y a 4j' },
+  { id:5, kind:'offre', title:'Dépannage informatique & WiFi', desc:'Ingénieur IT, je peux vous aider à configurer votre box, réparer votre PC, installer un logiciel ou sécuriser votre réseau.', cat:'informatique', dispo:'Sur demande', comp:'gratuit', user:1, date:'Il y a 5j' },
+  { id:6, kind:'demande', title:'Cherche covoiturage vers Lyon vendredi', desc:'Je cherche quelqu\'un qui part vers Lyon ce vendredi soir depuis Paris. Je participe aux frais d\'essence bien sûr !', cat:'transport', dispo:'Vendredi soir', comp:'frais', user:3, date:'Il y a 6h' },
+  { id:7, kind:'offre', title:'Cours de cuisine végétarienne', desc:'Chef amateur, je propose des ateliers cuisine végétarienne en groupe (4 personnes max). On cuisine ensemble puis on mange !', cat:'cuisine', dispo:'1 samedi/mois', comp:'recip', user:2, date:'Il y a 6j' },
+  { id:8, kind:'demande', title:'Besoin d\'un plombier pour fuite robinet', desc:'J\'ai une petite fuite sur un robinet de cuisine. Si quelqu\'un s\'y connaît en plomberie, je suis preneur ! Je peux rendre un service en échange.', cat:'bricolage', dispo:'Dès que possible', comp:'recip', user:0, date:'Il y a 1j' },
+];
+
+let svcFilter = 'all';
+
+function filterServices(type, el) {
+  svcFilter = type;
+  document.querySelectorAll('.svc-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderServices();
+}
+
+function renderServices() {
+  const list = document.getElementById('services-list');
+  if (!list) return;
+  list.innerHTML = '';
+  let data = services;
+  if (svcFilter === 'offre' || svcFilter === 'demande') {
+    data = services.filter(s => s.kind === svcFilter);
+  } else if (svcFilter !== 'all') {
+    data = services.filter(s => s.cat === svcFilter);
+  }
+  if (!data || data.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:48px;color:var(--text-soft)">Aucun service dans cette catégorie 🔍</div>';
+    return;
+  }
+  data.forEach((s, i) => {
+    const uname  = s.user_name  || (USERS[s.user] ? USERS[s.user].name  : 'Collègue');
+    const ucolor = s.user_color || (USERS[s.user] ? USERS[s.user].color : '#8B6A4A');
+    const div = document.createElement('div');
+    div.className = 'service-card' + (s.kind === 'demande' ? ' demande' : '');
+    div.style.animationDelay = (i * 0.05) + 's';
+    div.innerHTML = `
+      <div class="svc-icon-wrap">${SVC_ICONS[s.cat] || '🌟'}</div>
+      <div class="svc-body">
+        <div class="svc-top">
+          <span class="svc-title">${s.title}</span>
+          <span class="svc-pill ${s.kind === 'offre' ? 'pill-offre' : 'pill-demande'}">${s.kind === 'offre' ? '✋ Offre' : '🙋 Demande'}</span>
+        </div>
+        <div class="svc-desc">${s.desc || s.description || ''}</div>
+        <div class="svc-footer">
+          <div class="svc-meta">
+            <div class="avatar" style="background:${ucolor};width:24px;height:24px;font-size:0.7rem">${uname.charAt(0)}</div>
+            ${uname} · ${s.date || 'Récent'}
+            <span class="svc-cat-tag">${SVC_CAT_LABELS[s.cat] || s.cat}</span>
+            <span class="svc-dispo">🕐 ${s.dispo}</span>
+            <span class="svc-cat-tag">${COMP_LABELS[s.comp] || s.comp}</span>
+          </div>
+          <button class="btn-svc-contact" onclick="contactService('${s.title}','${uname}')">
+            ${s.kind === 'offre' ? '📩 Intéressé(e) !' : '🤝 Je peux aider !'}
+          </button>
+        </div>
+      </div>`;
+    list.appendChild(div);
+  });
+  document.getElementById('cnt-services').textContent = services.length;
+}
+
+let currentSvcType = 'offre';
+function openServiceModal() {
+  selectSvcType('offre', document.getElementById('svctype-offre'));
+  ['svc-title','svc-desc','svc-dispo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('service-modal').classList.add('open');
+}
+function selectSvcType(type, btn) {
+  currentSvcType = type;
+  ['offre','demande'].forEach(t => {
+    document.getElementById('svctype-'+t).className = 'type-btn';
+  });
+  btn.classList.add(type === 'offre' ? 'active-don' : 'active-location');
+}
+async function submitService() {
+  const title = document.getElementById('svc-title').value.trim();
+  const desc  = document.getElementById('svc-desc').value.trim();
+  if (!title || !desc) { showToast('⚠️ Remplissez le titre et la description'); return; }
+  const u = USERS[Math.floor(Math.random() * USERS.length)];
+  const rdvDate = document.getElementById('svc-rdv-date').value;
+
+  const newSvc = {
+    kind: currentSvcType, title, description: desc,
+    cat:   document.getElementById('svc-cat').value,
+    dispo: document.getElementById('svc-dispo').value || 'À définir',
+    comp:  document.getElementById('svc-comp').value,
+    rdv_date: rdvDate || null,
+    user_name: u.name, user_color: u.color
+  };
+
+  const { error } = await db.from('services').insert([newSvc]);
+  if (error) { showToast('❌ Erreur lors de la sauvegarde'); console.error(error); return; }
+
+  await loadServices();
+  renderServices();
+  closeModal('service-modal');
+  if (rdvDate) {
+    addRdvNotif(title, new Date(rdvDate).toLocaleDateString('fr-FR'), '?h');
+  } else {
+    showToast('✅ Service publié et sauvegardé !');
+  }
+}
+function contactService(titre, nom) {
+  showToast('📩 Message envoyé à ' + nom + ' pour : ' + titre);
+}
+
+renderServices();
+
+// ── RGPD ──
+function rgpdAccept() {
+  document.getElementById('rgpd-banner').style.display = 'none';
+  showToast('✅ Consentement enregistré — merci !');
+}
+function rgpdDecline() {
+  document.getElementById('rgpd-banner').style.display = 'none';
+  showToast('ℹ️ Vous pouvez consulter la politique via l\'onglet Aide.');
+}
+// Afficher le bandeau seulement si pas encore accepté (simulé sans localStorage)
+// En production, utiliser : if(!localStorage.getItem('rgpd')) { ... }
+
+// ── ÉVALUATIONS (ÉTOILES) ──
+let currentRating = 0;
+function hoverStar(n) {
+  document.querySelectorAll('.star').forEach((s,i) => s.classList.toggle('active', i < n));
+}
+function resetStars() {
+  document.querySelectorAll('.star').forEach((s,i) => s.classList.toggle('active', i < currentRating));
+}
+function rateStar(n) {
+  currentRating = n;
+  resetStars();
+  const labels = ['','Décevant 😕','Passable 😐','Bien 🙂','Très bien 😊','Excellent ! 🌟'];
+  document.getElementById('rating-count').textContent = labels[n] + ' — Merci pour votre avis !';
+  showToast('⭐ Note ' + n + '/5 enregistrée');
+}
+
+// ── MESSAGERIE ──
+const conversations = [
+  {
+    id:1, user:2, unread:1, subject:"Tente 4 places",
+    messages:[
+      {from:'them', text:"Bonjour ! La tente est-elle toujours disponible pour juillet ?", time:"10:32"},
+      {from:'me',   text:"Oui, elle est libre du 14 au 28 juillet. Ça vous convient ?", time:"10:45"},
+      {from:'them', text:"Parfait ! Je la prends pour 10 jours. Comment on fait ?", time:"11:02"},
+    ]
+  },
+  {
+    id:2, user:3, unread:1, subject:"Robot de cuisine Moulinex",
+    messages:[
+      {from:'them', text:"Bonjour, est-ce que le robot inclut le fouet et le bol mixeur ?", time:"Hier"},
+      {from:'me',   text:"Oui, tous les accessoires d'origine sont inclus, plus la notice.", time:"Hier"},
+    ]
+  },
+  {
+    id:3, user:1, unread:0, subject:"Cours de yoga",
+    messages:[
+      {from:'me',   text:"Bonjour ! Je suis intéressé par les cours du mardi matin.", time:"Lundi"},
+      {from:'them', text:"Super ! On se retrouve à 8h en salle de réunion B. Tapis dispo sur place.", time:"Lundi"},
+    ]
+  },
+];
+let activeConv = null;
+
+function renderConvList() {
+  const list = document.getElementById('conv-list');
+  list.innerHTML = '';
+  conversations.forEach(c => {
+    const u = USERS[c.user];
+    const div = document.createElement('div');
+    div.className = 'conv-item' + (activeConv===c.id ? ' active' : '');
+    div.onclick = () => openConv(c.id);
+    div.innerHTML = `
+      <div class="avatar" style="background:${u.color};width:36px;height:36px;font-size:0.9rem;flex-shrink:0">${u.name.charAt(0)}</div>
+      <div class="conv-info">
+        <div class="conv-name">${u.name}</div>
+        <div class="conv-preview">${c.messages[c.messages.length-1].text}</div>
+      </div>
+      ${c.unread ? `<span class="conv-unread">${c.unread}</span>` : ''}`;
+    list.appendChild(div);
+  });
+}
+
+function openConv(id) {
+  activeConv = id;
+  const c = conversations.find(x=>x.id===id);
+  c.unread = 0;
+  renderConvList();
+  const u = USERS[c.user];
+  const area = document.getElementById('chat-area');
+  area.innerHTML = `
+    <div class="msg-chat-header">
+      <div class="avatar" style="background:${u.color};width:32px;height:32px;font-size:0.85rem">${u.name.charAt(0)}</div>
+      <div>
+        <div>${u.name}</div>
+        <div class="msg-chat-subject">📌 ${c.subject}</div>
+      </div>
+    </div>
+    <div class="msg-bubbles" id="bubbles-${id}"></div>
+    <div class="msg-input-bar">
+      <input class="msg-input" id="msg-input-${id}" type="text" placeholder="Écrire un message…" onkeydown="if(event.key==='Enter')sendMsg(${id})">
+      <button class="btn-send" onclick="sendMsg(${id})">Envoyer ↗</button>
+    </div>`;
+  renderBubbles(c);
+  // update badge
+  const total = conversations.reduce((s,x)=>s+x.unread,0);
+  document.getElementById('cnt-msg').textContent = total || '';
+  document.getElementById('notif-count').textContent = total;
+  document.getElementById('notif-count').style.display = total ? 'flex' : 'none';
+}
+
+function renderBubbles(c) {
+  const box = document.getElementById('bubbles-'+c.id);
+  if (!box) return;
+  box.innerHTML = '';
+  c.messages.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'bubble ' + m.from;
+    div.innerHTML = `${m.text}<div class="bubble-time">${m.time}</div>`;
+    box.appendChild(div);
+  });
+  box.scrollTop = box.scrollHeight;
+}
+
+function sendMsg(id) {
+  const input = document.getElementById('msg-input-'+id);
+  const text = input.value.trim();
+  if (!text) return;
+  const c = conversations.find(x=>x.id===id);
+  c.messages.push({from:'me', text, time:"À l'instant"});
+  renderBubbles(c);
+  renderConvList();
+  input.value = '';
+}
+
+renderConvList();
+
+// ── SYSTÈME DE NOTIFICATIONS ──
+
+// Simuler "aujourd'hui" pour la démo
+const TODAY = new Date();
+const fmt = d => d.toLocaleDateString('fr-FR', {day:'2-digit', month:'2-digit', year:'numeric'});
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+
+// Données des échanges en cours avec dates
+let echangesEnCours = [
+  {
+    id:1, type:'restitution', objet:'Tente 4 places', emprunteur:'Marie L.',
+    dateRetour: fmt(addDays(TODAY, 0)), // Aujourd'hui ! (jour J)
+    urgence: 'urgent'
+  },
+  {
+    id:2, type:'restitution', objet:'Perceuse 18V', emprunteur:'Thomas B.',
+    dateRetour: fmt(addDays(TODAY, 2)), // Dans 48h
+    urgence: 'warning'
+  },
+  {
+    id:3, type:'restitution', objet:'Projecteur HD', emprunteur:'Kevin M.',
+    dateRetour: fmt(addDays(TODAY, 7)), // Dans 7 jours
+    urgence: 'info'
+  },
+  {
+    id:4, type:'rdv', objet:'Cours d\'anglais', avec:'Sophie M.',
+    dateRdv: fmt(addDays(TODAY, 1)), // Demain (rappel veille)
+    heure: '18h00', urgence: 'warning'
+  },
+  {
+    id:5, type:'rdv', objet:'Aide déménagement', avec:'Paul R.',
+    dateRdv: fmt(addDays(TODAY, 0)), // Aujourd'hui
+    heure: '09h00', urgence: 'urgent'
+  },
+  {
+    id:6, type:'confirmation', objet:'Atelier cuisine végétarienne', avec:'Laure D.',
+    dateRdv: fmt(addDays(TODAY, 14)),
+    heure: '14h00', urgence: 'success'
+  },
+];
+
+function buildNotifications() {
+  const notifs = [];
+  echangesEnCours.forEach(e => {
+    if (e.type === 'restitution') {
+      if (e.urgence === 'urgent') {
+        notifs.push({
+          icon: '🚨', type: 'urgent',
+          msg: `Restitution aujourd'hui — ${e.objet}`,
+          sub: `${e.emprunteur} doit vous rendre cet objet aujourd'hui`,
+          time: "Maintenant"
+        });
+      } else if (e.urgence === 'warning') {
+        notifs.push({
+          icon: '⏰', type: 'warning',
+          msg: `Rappel 48h — Restitution de : ${e.objet}`,
+          sub: `${e.emprunteur} doit vous le rendre le ${e.dateRetour}`,
+          time: "Il y a 1h"
+        });
+      } else {
+        notifs.push({
+          icon: '📅', type: 'info',
+          msg: `À venir — Restitution de : ${e.objet}`,
+          sub: `Date prévue : ${e.dateRetour} par ${e.emprunteur}`,
+          time: "Ce matin"
+        });
+      }
+    } else if (e.type === 'rdv') {
+      if (e.urgence === 'urgent') {
+        notifs.push({
+          icon: '🗓', type: 'urgent',
+          msg: `Rendez-vous AUJOURD'HUI — ${e.objet}`,
+          sub: `Avec ${e.avec} à ${e.heure}`,
+          time: "Maintenant"
+        });
+      } else {
+        notifs.push({
+          icon: '🔔', type: 'warning',
+          msg: `Rappel — RDV demain : ${e.objet}`,
+          sub: `Avec ${e.avec} le ${e.dateRdv} à ${e.heure}`,
+          time: "Il y a 2h"
+        });
+      }
+    } else if (e.type === 'confirmation') {
+      notifs.push({
+        icon: '✅', type: 'success',
+        msg: `RDV confirmé — ${e.objet}`,
+        sub: `Avec ${e.avec} le ${e.dateRdv} à ${e.heure}`,
+        time: "Hier"
+      });
+    }
+  });
+  return notifs;
+}
+
+function renderNotifPanel() {
+  const list = document.getElementById('notif-list');
+  const notifs = buildNotifications();
+  list.innerHTML = '';
+
+  if (notifs.length === 0) {
+    list.innerHTML = '<div class="notif-empty">🎉 Aucune notification<br><small>Tout est à jour !</small></div>';
+    return;
+  }
+
+  // Section urgentes
+  const urgentes = notifs.filter(n => n.type === 'urgent');
+  const autres = notifs.filter(n => n.type !== 'urgent');
+
+  if (urgentes.length) {
+    const sec = document.createElement('div');
+    sec.className = 'notif-section-title';
+    sec.innerHTML = `🚨 URGENT — ${urgentes.length} action(s) requise(s)`;
+    list.appendChild(sec);
+    urgentes.forEach(n => list.appendChild(makeNotifItem(n)));
+  }
+
+  if (autres.length) {
+    const sec = document.createElement('div');
+    sec.className = 'notif-section-title';
+    sec.innerHTML = '🔔 À venir';
+    list.appendChild(sec);
+    autres.forEach(n => list.appendChild(makeNotifItem(n)));
+  }
+
+  // Mettre à jour le badge
+  const total = notifs.length;
+  const badge = document.getElementById('notif-count');
+  badge.textContent = total;
+  badge.style.display = total ? 'flex' : 'none';
+  if (urgentes.length) badge.classList.add('urgent-badge');
+  else badge.classList.remove('urgent-badge');
+}
+
+function makeNotifItem(n) {
+  const div = document.createElement('div');
+  div.className = `notif-item ${n.type}`;
+  div.innerHTML = `
+    <div class="notif-icon">${n.icon}</div>
+    <div class="notif-body">
+      <div class="notif-msg">${n.msg}</div>
+      <div class="notif-sub">${n.sub}</div>
+    </div>
+    <div class="notif-time">${n.time}</div>`;
+  return div;
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notif-panel');
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) renderNotifPanel();
+}
+
+function clearAllNotifs() {
+  echangesEnCours = echangesEnCours.filter(e => e.urgence === 'info' || e.urgence === 'success');
+  renderNotifPanel();
+  showToast('✅ Notifications marquées comme lues');
+}
+
+// Fermer le panneau si on clique ailleurs
+document.addEventListener('click', e => {
+  const panel = document.getElementById('notif-panel');
+  const btn = document.getElementById('notif-btn');
+  if (!panel.contains(e.target) && !btn.contains(e.target)) {
+    panel.classList.remove('open');
+  }
+});
+
+// Ajouter une notif quand on publie un prêt/location avec date
+function addRestitutionNotif(objet, date) {
+  echangesEnCours.push({
+    id: echangesEnCours.length + 1,
+    type: 'restitution', objet, emprunteur: 'Nouveau collègue',
+    dateRetour: date, urgence: 'info'
+  });
+}
+
+// Ajouter une notif de confirmation RDV
+function addRdvNotif(objet, date, heure) {
+  echangesEnCours.push({
+    id: echangesEnCours.length + 1,
+    type: 'confirmation', objet, avec: 'Collègue',
+    dateRdv: date, heure: heure || '?h', urgence: 'success'
+  });
+  showToast('✅ RDV confirmé — rappel programmé la veille !');
+}
+
+// Initialiser les badges
+renderNotifPanel();
+
+// ── UTILS ──
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display='block';
+  setTimeout(()=>t.style.display='none', 3200);
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); });
+});
+
+// ── LANCEMENT ──
+initApp();
+</script>
+</body>
+</html>
